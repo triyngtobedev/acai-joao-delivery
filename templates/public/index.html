@@ -1,48 +1,57 @@
 {% extends "base.html" %}
 
 {% block hero %}
-<header class="hero-section d-flex align-items-center justify-content-center text-center" style="min-height: 80vh; background: linear-gradient(135deg, #0D0D0D 0%, #1a0a2e 50%, #0D0D0D 100%);">
-    <div class="container">
-        <h1 class="display-1 fw-bold mb-4" style="font-family: 'Syne', sans-serif; color: #4ADE80;">Açaí do João</h1>
-        <p class="lead mb-4" style="color: #d4d4d8; font-family: 'Inter', sans-serif;">Delivery de açaí em Salvador/BA</p>
-        <div id="store-status" class="mb-4">
+<header class="hero-section" style="background: linear-gradient(180deg, #0D0D0D 0%, #1a0a2e 100%); padding: 40px 0 20px;">
+    <div class="container text-center">
+        <h1 class="fw-bold mb-2" style="font-family: 'Syne', sans-serif; color: #4ADE80; font-size: 2rem; line-height: 1.2;">Açaí do João</h1>
+        <p class="mb-3" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.95rem;">Delivery de açaí em Salvador/BA</p>
+        <div id="store-status" class="mb-3">
             {% if store and store.is_open %}
                 <span class="badge rounded-pill px-4 py-2 fs-6" style="background-color: #4ADE80; color: #0D0D0D;">🟢 Aberto para delivery</span>
             {% else %}
                 <span class="badge rounded-pill px-4 py-2 fs-6" style="background-color: #6B21A8; color: #fff;">🔴 Fechado</span>
             {% endif %}
         </div>
-        <a href="#cardapio" class="btn btn-lg px-5" style="background-color: #6B21A8; color: #fff; border: none; font-family: 'Inter', sans-serif;">Ver Cardápio</a>
+        <a href="#cardapio" class="btn btn-lg px-5" style="background-color: #6B21A8; color: #fff; border: none; font-family: 'Inter', sans-serif; font-weight: 500;">Ver Cardápio</a>
     </div>
 </header>
 {% endblock %}
 
 {% block content %}
-<section id="cardapio" class="py-5">
+<section id="cardapio" class="py-4">
     <div class="container">
-        <h2 class="text-center mb-5 fw-bold" style="font-family: 'Syne', sans-serif; color: #4ADE80;">Nosso Cardápio</h2>
-        <div class="row" id="categorias-list">
+        <h2 class="text-center mb-4 fw-bold" style="font-family: 'Syne', sans-serif; color: #4ADE80; font-size: 1.5rem;">Nosso Cardápio</h2>
+        <div class="row g-3" id="categorias-list">
             {% for category in categories %}
-            <div class="col-12 mb-4">
-                <h3 class="fw-bold" style="color: #6B21A8; font-family: 'Syne', sans-serif;">{{ category.name }}</h3>
-                <hr style="border-color: #6B21A8;">
+            <div class="col-12">
+                <h3 class="fw-bold" style="color: #6B21A8; font-family: 'Syne', sans-serif; font-size: 1.1rem;">{{ category.name }}</h3>
+                <hr style="border-color: #2D1B4E; margin: 4px 0 12px;">
             </div>
-            <div class="row g-4" id="produtos-{{ category.id }}">
+            <div class="col-12 product-grid" id="produtos-{{ category.id }}">
                 {% for product in products if product.category_id == category.id and product.is_active %}
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card product-card h-100" style="background-color: #1a1a1a; border: 1px solid #333; border-radius: 16px; overflow: hidden;">
-                        <div class="bg-light d-flex align-items-center justify-content-center" style="height: 200px; background-color: #2a2a2a;">
-                            <span class="display-6" style="color: #6B21A8;">🫐</span>
+                <div class="product-card d-flex align-items-center gap-3 mb-3" style="background-color: #1a1a1a; border: 1px solid #2D1B4E; border-radius: 16px; overflow: hidden; padding: 12px;">
+                    <div class="product-image flex-shrink-0" style="width: 80px; height: 80px; background-color: #2D1B4E; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        {% if product.image_url %}
+                            <img src="{{ product.image_url }}" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                                <ellipse cx="12" cy="5" rx="9" ry="3" fill="#2D1B4E" stroke="#4ADE80"/>
+                            </svg>
+                        {% endif %}
+                    </div>
+                    <div class="product-info flex-grow-1 d-flex flex-column justify-content-between" style="min-width: 0;">
+                        <div>
+                            <h5 class="fw-bold mb-0" style="color: #fff; font-family: 'Inter', sans-serif; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ product.name }}</h5>
+                            <p class="mb-0 mt-1" style="color: #a1a1aa; font-family: 'Inter', sans-serif; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ product.description }}</p>
                         </div>
-                        <div class="card-body d-flex flex-column" style="background-color: #1a1a1a;">
-                            <h5 class="card-title fw-bold" style="color: #fff; font-family: 'Inter', sans-serif;">{{ product.name }}</h5>
-                            <p class="card-text text-muted" style="font-family: 'Inter', sans-serif; font-size: 0.85rem;">{{ product.description }}</p>
-                            <div class="mt-auto d-flex justify-content-between align-items-center">
-                                <span class="fs-4 fw-bold" style="color: #4ADE80;">R$ {{ "%.2f"|format(product.price) }}</span>
-                                <button class="btn btn-add-cart" style="background-color: #6B21A8; color: #fff; border: none; border-radius: 12px;" data-id="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.price }}" data-category="{{ category.name }}">
-                                    + Adicionar
-                                </button>
-                            </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="fs-5 fw-bold" style="color: #4ADE80; font-family: 'Inter', sans-serif;">R$ {{ "%.2f"|format(product.price) }}</span>
+                            <button class="btn-add-cart flex-shrink-0" style="background-color: #6B21A8; color: #fff; border: none; border-radius: 12px; padding: 8px 16px; font-weight: 500; font-family: 'Inter', sans-serif; font-size: 0.85rem; cursor: pointer; white-space: nowrap;" data-id="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.price }}" data-category="{{ category.name }}">
+                                + Adicionar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -55,13 +64,13 @@
 {% endblock %}
 
 {% block footer %}
-<footer class="fixed-bottom" style="background-color: #6B21A8; padding: 12px 0; box-shadow: 0 -4px 20px rgba(107, 33, 168, 0.3);">
+<footer class="fixed-bottom" style="background-color: #6B21A8; padding: 10px 0; box-shadow: 0 -4px 20px rgba(107, 33, 168, 0.3); z-index: 1000;">
     <div class="container d-flex justify-content-between align-items-center">
         <div>
-            <span style="color: #fff; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Total:</span>
+            <span style="color: #fff; font-family: 'Inter', sans-serif; font-size: 0.8rem;">Total:</span>
             <span class="fs-5 fw-bold" style="color: #fff; font-family: 'Inter', sans-serif;" id="footer-total">R$ 0.00</span>
         </div>
-        <button class="btn btn-dark px-4" style="background-color: #4ADE80; color: #0D0D0D; border: none; font-family: 'Inter', sans-serif; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#carrinhoModal">
+        <button class="btn px-4" style="background-color: #4ADE80; color: #0D0D0D; border: none; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.9rem;" data-bs-toggle="modal" data-bs-target="#carrinhoModal">
             🛒 Carrinho (<span id="footer-cart-count">0</span>)
         </button>
     </div>

@@ -7,7 +7,8 @@
     --text-light: #f0f0f0;
     --text-gray: #a1a1aa;
     --card-bg: #1a1a1a;
-    --border-color: #333;
+    --border-color: #2D1B4E;
+    --placeholder-bg: #2D1B4E;
 }
 
 * {
@@ -29,33 +30,67 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Hero Section */
 .hero-section {
-    background: linear-gradient(135deg, #0D0D0D 0%, #1a0a2e 50%, #0D0D0D 100%);
-    padding-top: 80px;
+    padding-top: 40px;
+    padding-bottom: 20px;
 }
 
-/* Product Cards */
+/* Product Cards - Mobile horizontal layout */
 .product-card {
-    transition: transform 0.2s, box-shadow 0.2s;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
 }
 
-.product-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(107, 33, 168, 0.3);
+.product-image {
+    width: 80px;
+    height: 80px;
+    background-color: var(--placeholder-bg);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
-/* Buttons */
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-info {
+    min-width: 0;
+}
+
+.product-info h5 {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.product-info p {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Add to Cart Button */
 .btn-add-cart {
     border-radius: 12px;
     padding: 8px 16px;
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.85rem;
-    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .btn-add-cart:hover {
     opacity: 0.85;
-    transform: scale(1.05);
 }
 
 /* Footer Carrinho */
@@ -81,9 +116,19 @@ footer {
     border-top: 2px solid #6B21A8;
 }
 
+.form-control, .form-check-input, .form-select {
+    font-family: 'Inter', sans-serif;
+}
+
 .form-control:focus {
     border-color: #6B21A8;
     box-shadow: 0 0 0 0.2rem rgba(107, 33, 168, 0.25);
+}
+
+.form-control, textarea.form-control {
+    background-color: #2a2a2a !important;
+    border: 1px solid #6B21A8;
+    color: #fff;
 }
 
 /* Category Headers */
@@ -132,17 +177,7 @@ section h3 {
     margin-left: 8px;
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.product-card {
-    animation: fadeIn 0.4s ease-out;
-}
-
-/* Notification toast */
+/* Toast */
 .toast-container {
     z-index: 9999;
 }
@@ -194,25 +229,98 @@ section h3 {
     font-family: 'Inter', sans-serif;
 }
 
-/* Responsive */
-@media (max-width: 576px) {
-    .hero-section h1 {
-        font-size: 2rem;
+/* Navbar links */
+.navbar-nav .nav-link {
+    font-family: 'Inter', sans-serif;
+}
+
+/* ===== Desktop/Tablet ===== */
+@media (min-width: 641px) {
+    body {
+        padding-bottom: 80px;
     }
-    .hero-section .lead {
+
+    .hero-section {
+        padding-top: 60px;
+        padding-bottom: 30px;
+    }
+
+    .hero-section h1 {
+        font-size: 2.5rem;
+    }
+
+    .product-card {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .product-image {
+        width: 100%;
+        height: 200px;
+        border-radius: 12px;
+        flex-shrink: 0;
+    }
+
+    .product-info h5 {
         font-size: 1rem;
     }
-    footer .container {
-        flex-direction: column;
-        gap: 8px;
+
+    .product-info p {
+        font-size: 0.85rem;
     }
-    .cart-item {
-        flex-direction: column;
-        align-items: flex-start;
+
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .product-grid .product-card {
+        margin-bottom: 0;
+    }
+
+    footer .container {
+        max-width: 600px;
     }
 }
 
-/* WhatsApp message formatting */
+/* ===== Mobile ===== */
+@media (max-width: 640px) {
+    .hero-section h1 {
+        font-size: 1.5rem;
+    }
+    .hero-section .lead {
+        font-size: 0.95rem;
+    }
+    footer .container {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+}
+
+/* ===== Remove Bootstrap default white backgrounds ===== */
+.bg-light {
+    background-color: transparent !important;
+}
+
+.navbar {
+    background-color: #0D0D0D !important;
+}
+
+main, section {
+    background-color: #0D0D0D;
+}
+
+.modal-body, .modal-content {
+    background-color: #1a1a1a !important;
+}
+
+/* ===== WhatsApp message formatting ===== */
 .whatsapp-msg {
     white-space: pre-line;
     font-family: 'Inter', sans-serif;
