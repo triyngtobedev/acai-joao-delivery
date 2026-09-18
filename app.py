@@ -1,4 +1,5 @@
 import os
+import json
 import urllib.parse
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
@@ -85,7 +86,7 @@ def pedido():
         nome = data.get('nome')
         endereco = data.get('endereco')
         observacoes = data.get('observacoes', '')
-        itens = eval(data.get('itens', '[]'))
+        itens = json.loads(data.get('itens', '[]'))
 
     if not nome or not endereco:
         return jsonify({'error': 'Nome e endereço são obrigatórios'}), 400
@@ -178,7 +179,7 @@ def create_product():
 @app.route('/admin/products/<int:id>/update', methods=['POST'])
 @login_required
 def update_product(id):
-    product = Product.query.get_or_404(id)
+    product = db.get_or_404(Product, id)
     product.category_id = request.form.get('category_id', product.category_id)
     product.name = request.form.get('name', product.name)
     product.description = request.form.get('description', product.description)
@@ -195,7 +196,7 @@ def update_product(id):
 @app.route('/admin/products/<int:id>/delete', methods=['POST'])
 @login_required
 def delete_product(id):
-    product = Product.query.get_or_404(id)
+    product = db.get_or_404(Product, id)
     db.session.delete(product)
     db.session.commit()
     return jsonify({'success': True})
@@ -204,11 +205,11 @@ def delete_product(id):
 @app.route('/admin/products/<int:id>/toggle', methods=['POST'])
 @login_required
 def toggle_product(id):
-    product = Product.query.get_or_404(id)
+    product = db.get_or_404(Product, id)
     product.is_active = not product.is_active
     db.session.commit()
     return jsonify({'success': True, 'is_active': product.is_active})
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true', host='0.0.0.0', port=5000)
