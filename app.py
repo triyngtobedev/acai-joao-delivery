@@ -1,6 +1,7 @@
 import os
 import json
 import urllib.parse
+import secrets
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from dotenv import load_dotenv
@@ -9,8 +10,14 @@ from models import db, Category, Product, StoreConfig, Order, OrderItem
 load_dotenv()
 
 app = Flask(__name__)
+APP_ENV = os.getenv('APP_ENV', os.getenv('FLASK_ENV', 'development')).lower()
+IS_PRODUCTION = APP_ENV == 'production'
+
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'change-me')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION
 
 instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
 os.makedirs(instance_dir, exist_ok=True)
@@ -30,6 +37,26 @@ ORDER_STATUS_LABELS = {
     'done': 'Finalizado',
     'canceled': 'Cancelado',
 }
+
+
+def validate_runtime_config():
+    if not IS_PRODUCTION:
+        return
+
+    insecure_values = []
+    if app.config['SECRET_KEY'] in ('', 'change-me'):
+        insecure_values.append('FLASK_SECRET_KEY')
+    if ADMIN_USERNAME in ('', 'admin'):
+        insecure_values.append('ADMIN_USERNAME')
+    if ADMIN_PASSWORD in ('', 'change-me', 'admin'):
+        insecure_values.append('ADMIN_PASSWORD')
+
+    if insecure_values:
+        missing = ', '.join(insecure_values)
+        raise RuntimeError(f'Configuracao insegura para producao: ajuste {missing}.')
+
+
+validate_runtime_config()
 
 
 def seed_data():
@@ -123,6 +150,11 @@ def index():
     categories = Category.query.order_by(Category.sort_order.asc()).all()
     products = Product.query.filter_by(is_active=True).all()
     return render_template('public/index.html', store=store, categories=categories, products=products)
+
+
+@app.route('/healthz')
+def healthz():
+    return jsonify({'status': 'ok'}), 200
 
 
 @app.route('/pedido', methods=['POST'])
@@ -221,7 +253,9 @@ def admin_login():
 def admin_login_post():
     username = request.form.get('username')
     password = request.form.get('password')
-    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+    username_ok = secrets.compare_digest(username or '', ADMIN_USERNAME)
+    password_ok = secrets.compare_digest(password or '', ADMIN_PASSWORD)
+    if username_ok and password_ok:
         session['admin_logged_in'] = True
         return redirect(url_for('admin_dashboard'))
     return render_template('admin/login.html', error='Usuário ou senha inválidos')
@@ -323,4 +357,5 @@ def toggle_product(id):
 
 
 if __name__ == '__main__':
-    app.run(debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true', host='0.0.0.0', port=5000)
+    port = int(os.getenv('PORT', '5000'))
+    app.run(debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true', host='0.0.0.0', port=port)

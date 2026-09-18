@@ -8,6 +8,7 @@ Site de delivery de açaí desenvolvido em Flask com painel administrativo compl
 - Flask
 - Flask-SQLAlchemy
 - python-dotenv
+- gunicorn
 - Bootstrap 5.3 (mobile-first)
 - Jinja2 templates
 - SQLite
@@ -41,11 +42,20 @@ acai-joao-delivery/
 Crie um arquivo `.env` baseado em `.env.example`:
 
 ```env
-FLASK_SECRET_KEY=change-me
-DATABASE_URL=sqlite:///acai_joao.db
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-me
+APP_ENV=development
+FLASK_SECRET_KEY=gere-uma-chave-grande-e-aleatoria
+DATABASE_URL=
+ADMIN_USERNAME=joao_admin
+ADMIN_PASSWORD=troque-por-uma-senha-forte
 STORE_WHATSAPP=5571999999999
+```
+
+Em produção, defina `APP_ENV=production`. O app não inicia se `FLASK_SECRET_KEY`, `ADMIN_USERNAME` ou `ADMIN_PASSWORD` ainda estiverem com valores fracos/padrão.
+
+Para gerar uma chave segura:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 ## Como Rodar
@@ -60,19 +70,36 @@ flask --app app run --debug
 
 Acesse: http://localhost:5000
 
-### Remoto (Render / Railway / Hostinger / etc.)
+### Deploy (Render / Railway / Hostinger / etc.)
 
 1. Clone o repositório
-2. Crie o ambiente virtual e instale dependências
-3. Copie `.env.example` para `.env` e configure as variáveis
-4. Rode `flask --app app run --debug` ou adapte para o servidor WSGI da plataforma
-5. O banco SQLite é criado automaticamente na pasta `instance/`
+2. Configure as variáveis de ambiente na plataforma
+3. Use o comando de instalação: `pip install -r requirements.txt`
+4. Use o comando de start: `gunicorn app:app`
+5. Configure `APP_ENV=production`
+6. Configure `FLASK_SECRET_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD` e `STORE_WHATSAPP`
+7. Configure `DATABASE_URL` se a plataforma oferecer banco persistente
+
+O repositório inclui um `Procfile` com:
+
+```Procfile
+web: gunicorn app:app
+```
+
+### Checklist de Produção
+
+- `APP_ENV=production`
+- `FLASK_SECRET_KEY` forte e única
+- `ADMIN_USERNAME` diferente de `admin`
+- `ADMIN_PASSWORD` forte, diferente de `change-me`
+- `STORE_WHATSAPP` com o número real da loja
+- Banco persistente configurado ou volume persistente para SQLite
+- `/healthz` retornando `{"status":"ok"}`
 
 ### Credenciais Admin
 
-- Usuário padrão: `admin`
-- Senha padrão: `change-me`
-- Configuráveis via variáveis de ambiente `ADMIN_USERNAME` e `ADMIN_PASSWORD`
+- Nunca use `admin/change-me` em produção.
+- Configure via variáveis de ambiente `ADMIN_USERNAME` e `ADMIN_PASSWORD`.
 
 ## Funcionalidades
 
@@ -103,6 +130,7 @@ Acesse: http://localhost:5000
 `requirements.txt` contém:
 - Flask
 - Flask-SQLAlchemy
+- gunicorn
 - python-dotenv
 
 ## Banco de Dados
