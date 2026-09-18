@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold" style="font-family: 'Syne', sans-serif; color: #4ADE80;">Dashboard</h2>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-sm" style="background-color: #ef4444; color: #fff; border: none; font-family: 'Inter', sans-serif;">Sair</a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12 col-md-4 mb-2">
+            <div class="card p-3" style="background-color: #1a1a1a; border: 1px solid #6B21A8; border-radius: 12px;">
+                <div class="text-muted" style="font-family: 'Inter', sans-serif; font-size: 0.8rem;">Status</div>
+                <div class="fw-bold" style="font-family: 'Inter', sans-serif;">
+                    {% if store and store.is_open %}
+                        <span style="color: #4ADE80;">🟢 Aberto</span>
+                    {% else %}
+                        <span style="color: #ef4444;">🔴 Fechado</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4 mb-2">
+            <div class="card p-3" style="background-color: #1a1a1a; border: 1px solid #6B21A8; border-radius: 12px;">
+                <div class="text-muted" style="font-family: 'Inter', sans-serif; font-size: 0.8rem;">Total de Produtos</div>
+                <div class="fw-bold" style="font-family: 'Inter', sans-serif; color: #4ADE80;">{{ products|length }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4 mb-2">
+            <div class="card p-3" style="background-color: #1a1a1a; border: 1px solid #6B21A8; border-radius: 12px;">
+                <div class="text-muted" style="font-family: 'Inter', sans-serif; font-size: 0.8rem;">Ativos</div>
+                <div class="fw-bold" style="font-family: 'Inter', sans-serif; color: #4ADE80;">{{ products|selectattr('is_active')|list|length }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" style="background-color: #1a1a1a; border: 1px solid #6B21A8; border-radius: 16px;">
+        <div class="card-body p-4">
+            <h4 class="fw-bold mb-3" style="font-family: 'Syne', sans-serif; color: #6B21A8;">Criar Novo Produto</h4>
+            <form id="create-product-form" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Categoria</label>
+                    <select class="form-control" id="create-category" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Nome</label>
+                    <input type="text" class="form-control" id="create-name" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Preço</label>
+                    <input type="number" step="0.01" class="form-control" id="create-price" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">URL Imagem</label>
+                    <input type="url" class="form-control" id="create-image" style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Descrição</label>
+                    <input type="text" class="form-control" id="create-desc" style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="create-active" checked>
+                        <label class="form-check-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Ativo</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn" style="background-color: #4ADE80; color: #0D0D0D; border: none; font-weight: 600; font-family: 'Inter', sans-serif;">+ Criar Produto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card" style="background-color: #1a1a1a; border: 1px solid #6B21A8; border-radius: 16px;">
+        <div class="card-body p-4">
+            <h4 class="fw-bold mb-3" style="font-family: 'Syne', sans-serif; color: #6B21A8;">Produtos</h4>
+            <div class="table-responsive">
+                <table class="table table-dark" style="color: #fff;">
+                    <thead>
+                        <tr style="border-color: #6B21A8;">
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Categoria</th>
+                            <th>Preço</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr style="border-color: #333;">
+                            <td>{{ product.id }}</td>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.category.name if product.category else '-' }}</td>
+                            <td>R$ {{ "%.2f"|format(product.price) }}</td>
+                            <td>
+                                <span class="badge {% if product.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if product.is_active %}Ativo{% else %}Inativo{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-toggle" onclick="toggleProduct({{ product.id }})" style="background-color: {% if product.is_active %}#ef4444{% else %}#4ADE80{% endif %}; color: #fff; border: none; border-radius: 8px; font-size: 0.75rem; font-family: 'Inter', sans-serif;">
+                                    {% if product.is_active %}Desativar{% else %}Ativar{% endif %}
+                                </button>
+                                <button class="btn btn-sm" style="background-color: #6B21A8; color: #fff; border: none; border-radius: 8px; font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editModal{{ product.id }}">
+                                    ✏️
+                                </button>
+                                <button class="btn btn-sm" style="background-color: #ef4444; color: #fff; border: none; border-radius: 8px; font-size: 0.75rem;" onclick="deleteProduct({{ product.id }})">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for product in products %}
+<div class="modal fade" id="editModal{{ product.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: #1a1a1a; color: #fff;">
+            <div class="modal-header" style="border-color: #6B21A8;">
+                <h5 class="modal-title fw-bold" style="font-family: 'Syne', sans-serif; color: #4ADE80;">Editar: {{ product.name }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-form-{{ product.id }}" method="POST" action="{{ url_for('update_product', id=product.id) }}">
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Categoria</label>
+                        <select class="form-control" name="category_id" style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if cat.id == product.category_id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Nome</label>
+                        <input type="text" class="form-control" name="name" value="{{ product.name }}" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Descrição</label>
+                        <input type="text" class="form-control" name="description" value="{{ product.description }}" style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Preço</label>
+                        <input type="number" step="0.01" class="form-control" name="price" value="{{ product.price }}" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">URL da Imagem</label>
+                        <input type="url" class="form-control" name="image_url" value="{{ product.image_url }}" style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" id="edit-active-{{ product.id }}" {% if product.is_active %}checked{% endif %}>
+                            <label class="form-check-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Ativo</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn w-100" style="background-color: #4ADE80; color: #0D0D0D; border: none; font-weight: 600; font-family: 'Inter', sans-serif;">Salvar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
