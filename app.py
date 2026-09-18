@@ -22,6 +22,8 @@ app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION
 instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
 os.makedirs(instance_dir, exist_ok=True)
 db_url = os.getenv('DATABASE_URL')
+if db_url and db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql://', 1)
 if not db_url:
     db_url = 'sqlite:///' + os.path.join(instance_dir, 'acai_joao.db').replace(os.sep, '/')
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url

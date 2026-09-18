@@ -11,7 +11,8 @@ Site de delivery de açaí desenvolvido em Flask com painel administrativo compl
 - gunicorn
 - Bootstrap 5.3 (mobile-first)
 - Jinja2 templates
-- SQLite
+- SQLite (dev) / PostgreSQL (produção, via `DATABASE_URL`)
+- psycopg2-binary (driver PostgreSQL)
 
 ## Estrutura de Pastas
 
@@ -70,7 +71,21 @@ flask --app app run --debug
 
 Acesse: http://localhost:5000
 
-### Deploy (Render / Railway / Hostinger / etc.)
+### Deploy no Render (PostgreSQL)
+
+O repositório inclui um `render.yaml` (Blueprint) que cria automaticamente o **Web Service** e o banco **PostgreSQL** já conectados.
+
+1. No Render, vá em **New > Blueprint** e aponte para este repositório
+2. O `render.yaml` já configura: build (`pip install -r requirements.txt`), start (`gunicorn app:app`), health check (`/healthz`), `APP_ENV=production`, `FLASK_SECRET_KEY` gerada automaticamente e `DATABASE_URL` vinculada ao banco PostgreSQL
+3. Preencha manualmente as variáveis marcadas como `sync: false` (o Render pedirá na tela):
+   - `ADMIN_USERNAME`
+   - `ADMIN_PASSWORD`
+   - `STORE_WHATSAPP`
+4. Deploy. As tabelas e os dados iniciais são criados automaticamente no primeiro boot.
+
+O app aceita `DATABASE_URL` nos formatos `postgres://` e `postgresql://` (normalização automática para SQLAlchemy).
+
+### Outras plataformas (Railway / Hostinger / etc.)
 
 1. Clone o repositório
 2. Configure as variáveis de ambiente na plataforma
@@ -78,7 +93,7 @@ Acesse: http://localhost:5000
 4. Use o comando de start: `gunicorn app:app`
 5. Configure `APP_ENV=production`
 6. Configure `FLASK_SECRET_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD` e `STORE_WHATSAPP`
-7. Configure `DATABASE_URL` se a plataforma oferecer banco persistente
+7. Configure `DATABASE_URL` (ex.: `postgresql://user:senha@host:5432/db`) se a plataforma oferecer banco persistente
 
 O repositório inclui um `Procfile` com:
 
@@ -93,7 +108,7 @@ web: gunicorn app:app
 - `ADMIN_USERNAME` diferente de `admin`
 - `ADMIN_PASSWORD` forte, diferente de `change-me`
 - `STORE_WHATSAPP` com o número real da loja
-- Banco persistente configurado ou volume persistente para SQLite
+- Banco persistente configurado (PostgreSQL via `DATABASE_URL`) ou volume persistente para SQLite
 - `/healthz` retornando `{"status":"ok"}`
 
 ### Credenciais Admin
@@ -132,11 +147,12 @@ web: gunicorn app:app
 - Flask-SQLAlchemy
 - gunicorn
 - python-dotenv
+- psycopg2-binary
 
 ## Banco de Dados
 
-- SQLite via SQLAlchemy
-- Banco criado automaticamente em `instance/acai_joao.db`
+- SQLite via SQLAlchemy em desenvolvimento; PostgreSQL em produção via `DATABASE_URL`
+- Banco SQLite criado automaticamente em `instance/acai_joao.db`
 - Dados de exemplo inseridos automaticamente no primeiro acesso
 - Configuração da loja criada automaticamente
 
