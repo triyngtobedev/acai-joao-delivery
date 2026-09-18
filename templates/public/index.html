@@ -1,62 +1,74 @@
 {% extends "base.html" %}
 
 {% block hero %}
-<header class="hero-section" style="background: linear-gradient(180deg, #0D0D0D 0%, #1a0a2e 100%);">
-    <div class="container text-center">
-        <h1 class="fw-bold mb-2" style="font-family: 'Syne', sans-serif; color: #4ADE80; font-size: 2rem; line-height: 1.2;">Açaí do João</h1>
-        <p class="mb-3" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.95rem;">Delivery de açaí em Salvador/BA</p>
-        <div id="store-status" class="mb-3">
-            {% if store and store.is_open %}
-                <span class="badge rounded-pill px-4 py-2 fs-6" style="background-color: #4ADE80; color: #0D0D0D;">🟢 Aberto para delivery</span>
-            {% else %}
-                <span class="badge rounded-pill px-4 py-2 fs-6" style="background-color: #6B21A8; color: #fff;">🔴 Fechado</span>
-            {% endif %}
+<header class="hero-section">
+    <div class="hero-overlay"></div>
+    <div class="container hero-inner">
+        <div class="hero-copy">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Açaí do João" class="hero-logo">
+            <p class="hero-kicker">Delivery em Salvador/BA</p>
+            <h1>Açaí do João</h1>
+            <p class="hero-subtitle">Açaí cremoso, frutas frescas e combinações prontas para pedir sem enrolação.</p>
+            <div id="store-status" class="hero-status-wrap">
+                {% if store and store.is_open %}
+                    <span class="hero-badge hero-badge-open">Aberto para delivery</span>
+                {% else %}
+                    <span class="hero-badge hero-badge-closed">Fechado no momento</span>
+                {% endif %}
+            </div>
+            <a href="#cardapio" class="hero-btn">Ver cardápio</a>
         </div>
-        <a href="#cardapio" class="btn btn-lg px-5" style="background-color: #6B21A8; color: #fff; border: none; font-family: 'Inter', sans-serif; font-weight: 500;">Ver Cardápio</a>
+        <div class="hero-product" aria-hidden="true">
+            <img src="{{ url_for('static', filename='img/hero-pour.jpg') }}" alt="">
+        </div>
     </div>
 </header>
 {% endblock %}
 
 {% block content %}
-<section id="cardapio" class="py-4">
+<section id="cardapio" class="menu-section">
     <div class="container">
-        <h2 class="text-center mb-4 fw-bold" style="font-family: 'Syne', sans-serif; color: #4ADE80; font-size: 1.5rem;">Nosso Cardápio</h2>
-        <div class="row g-3" id="categorias-list">
+        <div class="section-heading">
+            <span>Escolha seu pedido</span>
+            <h2>Nosso Cardápio</h2>
+        </div>
+
+        <div id="categorias-list">
             {% for category in categories %}
-            <div class="col-12">
-                <h3 class="fw-bold" style="color: #6B21A8; font-family: 'Syne', sans-serif; font-size: 1.1rem;">{{ category.name }}</h3>
-                <hr style="border-color: #2D1B4E; margin: 4px 0 12px;">
-            </div>
-            <div class="col-12 product-grid" id="produtos-{{ category.id }}">
-                {% for product in products if product.category_id == category.id and product.is_active %}
-                <div class="product-card mb-3" style="background-color: #1a1a1a; border: 1px solid #2D1B4E; border-radius: 16px; overflow: hidden; padding: 12px;">
-                    <div class="product-image">
-                        {% if product.image_url %}
-                            <img src="{{ product.image_url }}" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: cover;">
-                        {% else %}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <ellipse cx="12" cy="5" rx="9" ry="3"/>
-                                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
-                                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
-                                <ellipse cx="12" cy="5" rx="9" ry="3" fill="#2D1B4E" stroke="#4ADE80"/>
-                            </svg>
-                        {% endif %}
-                    </div>
-                    <div class="product-info flex-grow-1 d-flex flex-column justify-content-between" style="min-width: 0;">
-                        <div>
-                            <h5 class="fw-bold mb-0" style="color: #fff; font-family: 'Inter', sans-serif; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ product.name }}</h5>
-                            <p class="mb-0 mt-1" style="color: #a1a1aa; font-family: 'Inter', sans-serif; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ product.description }}</p>
+            <section class="category-block" aria-labelledby="categoria-{{ category.id }}">
+                <h3 id="categoria-{{ category.id }}" class="category-title">{{ category.name }}</h3>
+                <div class="product-grid" id="produtos-{{ category.id }}">
+                    {% for product in products if product.category_id == category.id and product.is_active %}
+                    {% set fallback_image = loop.cycle('img/acai-foto2.jpg', 'img/hero-pour.jpg', 'img/acai-foto3.webp') %}
+                    <article class="product-card">
+                        <div class="product-image">
+                            {% if product.image_url and not product.image_url.startswith('/static/img/') %}
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}" onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/acai-foto2.jpg') }}';">
+                            {% else %}
+                                <img src="{{ url_for('static', filename=fallback_image) }}" alt="{{ product.name }}">
+                            {% endif %}
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <span class="fs-5 fw-bold" style="color: #4ADE80; font-family: 'Inter', sans-serif;">R$ {{ "%.2f"|format(product.price) }}</span>
-                            <button class="btn-add-cart flex-shrink-0" style="background-color: #6B21A8; color: #fff; border: none; border-radius: 12px; padding: 8px 16px; font-weight: 500; font-family: 'Inter', sans-serif; font-size: 0.85rem; cursor: pointer; white-space: nowrap;" data-id="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.price }}" data-category="{{ category.name }}">
-                                + Adicionar
-                            </button>
+                        <div class="product-info">
+                            <div>
+                                <h4>{{ product.name }}</h4>
+                                <p>{{ product.description }}</p>
+                            </div>
+                            <div class="product-footer">
+                                <span class="product-price">R$ {{ "%.2f"|format(product.price) }}</span>
+                                <button
+                                    class="btn-add-cart"
+                                    data-id="{{ product.id }}"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ category.name }}">
+                                    Adicionar
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    </article>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
+            </section>
             {% endfor %}
         </div>
     </div>
@@ -64,44 +76,42 @@
 {% endblock %}
 
 {% block footer %}
-<footer class="fixed-bottom" style="background-color: #6B21A8; padding: 10px 0; box-shadow: 0 -4px 20px rgba(107, 33, 168, 0.3); z-index: 1000;">
-    <div class="container d-flex justify-content-between align-items-center">
-        <div>
-            <span style="color: #fff; font-family: 'Inter', sans-serif; font-size: 0.8rem;">Total:</span>
-            <span class="fs-5 fw-bold" style="color: #fff; font-family: 'Inter', sans-serif;" id="footer-total">R$ 0.00</span>
+<footer class="cart-footer">
+    <div class="container cart-footer-inner">
+        <div class="cart-total-wrap">
+            <span>Total</span>
+            <strong id="footer-total">R$ 0.00</strong>
         </div>
-        <button class="btn px-4" style="background-color: #4ADE80; color: #0D0D0D; border: none; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.9rem;" data-bs-toggle="modal" data-bs-target="#carrinhoModal">
-            🛒 Carrinho (<span id="footer-cart-count">0</span>)
+        <button class="cart-open-btn" data-bs-toggle="modal" data-bs-target="#carrinhoModal">
+            Carrinho (<span id="footer-cart-count">0</span>)
         </button>
     </div>
 </footer>
 
 <div class="modal fade" id="carrinhoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background-color: #1a1a1a; color: #fff;">
-            <div class="modal-header" style="border-color: #6B21A8;">
-                <h5 class="modal-title fw-bold" style="font-family: 'Syne', sans-serif; color: #4ADE80;">Carrinho</h5>
+        <div class="modal-content modal-dark">
+            <div class="modal-header">
+                <h5 class="modal-title">Seu pedido</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="carrinho-list">
                 <p class="text-muted text-center">Seu carrinho está vazio</p>
             </div>
-            <div class="modal-footer" style="border-color: #6B21A8;">
-                <div class="w-100 mb-3">
-                    <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif;">Seu nome</label>
-                    <input type="text" class="form-control" id="cliente-nome" placeholder="Digite seu nome" style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+            <div class="modal-footer">
+                <div class="field-group">
+                    <label for="cliente-nome">Seu nome</label>
+                    <input type="text" id="cliente-nome" placeholder="Digite seu nome">
                 </div>
-                <div class="w-100 mb-3">
-                    <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif;">Endereço de entrega</label>
-                    <input type="text" class="form-control" id="cliente-endereco" placeholder="Digite seu endereço" style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                <div class="field-group">
+                    <label for="cliente-endereco">Endereço de entrega</label>
+                    <input type="text" id="cliente-endereco" placeholder="Rua, número, bairro">
                 </div>
-                <div class="w-100 mb-3">
-                    <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif;">Observações (opcional)</label>
-                    <textarea class="form-control" id="cliente-observacoes" rows="2" placeholder="Alguma observação..." style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;"></textarea>
+                <div class="field-group">
+                    <label for="cliente-observacoes">Observações</label>
+                    <textarea id="cliente-observacoes" rows="2" placeholder="Ex: sem granola, capricha no leite condensado"></textarea>
                 </div>
-                <button class="btn w-100" style="background-color: #4ADE80; color: #0D0D0D; border: none; font-weight: 600; font-family: 'Inter', sans-serif;" id="btn-finalizar-pedido">
-                    📲 Finalizar Pedido no WhatsApp
-                </button>
+                <button class="btn-finalizar" id="btn-finalizar-pedido">Finalizar no WhatsApp</button>
             </div>
         </div>
     </div>
