@@ -326,3 +326,17 @@ main, section {
     white-space: pre-line;
     font-family: 'Inter', sans-serif;
 }
+
+.product-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+@media (min-width: 640px) {
+    .product-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+.product-card {
+    width: 100%;
+}
