@@ -128,6 +128,7 @@ web: gunicorn app:app
 ### Painel Administrativo (`/admin`)
 - Login com credenciais configuráveis via `.env`
 - Dashboard com configurações da loja (nome, WhatsApp, taxa de entrega, status)
+- Configurações da loja editáveis via formulário (`POST /admin/store/update`), refletidas na página pública, na taxa do pedido e no link do WhatsApp
 - CRUD completo de produtos (criar, editar, excluir, ativar/desativar)
 - Todas as rotas admin protegidas por sessão
 

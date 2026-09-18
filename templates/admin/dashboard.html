@@ -51,6 +51,38 @@
 
     <div class="card mb-4" style="background-color: #1a1a1a; border: 1px solid #6B21A8; border-radius: 16px;">
         <div class="card-body p-4">
+            <h4 class="fw-bold mb-3" style="font-family: 'Syne', sans-serif; color: #6B21A8;">Configurações da Loja</h4>
+            <form id="store-config-form" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="store-name" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Nome da loja</label>
+                    <input type="text" class="form-control" id="store-name" name="store_name" value="{{ store.store_name if store else '' }}" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="store-whatsapp" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">WhatsApp (somente números, com DDI)</label>
+                    <input type="text" class="form-control" id="store-whatsapp" name="whatsapp_number" value="{{ store.whatsapp_number if store else '' }}" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="store-delivery-fee" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Taxa de entrega (R$)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="store-delivery-fee" name="delivery_fee" value="{{ '%.2f' % store.delivery_fee if store else '0.00' }}" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="store-is-open" name="is_open" {% if store and store.is_open %}checked{% endif %}>
+                        <label class="form-check-label" for="store-is-open" style="color: #d4d4d8; font-family: 'Inter', sans-serif; font-size: 0.85rem;">Loja aberta</label>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end justify-content-md-end">
+                    <button type="submit" class="btn" style="background-color: #4ADE80; color: #0D0D0D; border: none; font-weight: 600; font-family: 'Inter', sans-serif;">Salvar configurações</button>
+                </div>
+                <div class="col-12">
+                    <div id="store-config-feedback" class="d-none" style="font-family: 'Inter', sans-serif; font-size: 0.85rem;"></div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4" style="background-color: #1a1a1a; border: 1px solid #6B21A8; border-radius: 16px;">
+        <div class="card-body p-4">
             <h4 class="fw-bold mb-3" style="font-family: 'Syne', sans-serif; color: #6B21A8;">Pedidos Recentes</h4>
             {% if orders %}
             <div class="table-responsive">
@@ -261,6 +293,29 @@ function paintBadge(badge) {
 }
 
 document.querySelectorAll('.order-status-badge').forEach(paintBadge);
+
+document.getElementById('store-config-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const feedback = document.getElementById('store-config-feedback');
+    try {
+        const response = await fetch('/admin/store/update', {
+            method: 'POST',
+            body: new FormData(this)
+        });
+        const data = await response.json();
+        if (data.success) {
+            feedback.className = 'text-success';
+            feedback.textContent = 'Configurações salvas com sucesso.';
+            setTimeout(() => location.reload(), 800);
+        } else {
+            feedback.className = 'text-danger';
+            feedback.textContent = data.error || 'Erro ao salvar configurações.';
+        }
+    } catch (err) {
+        feedback.className = 'text-danger';
+        feedback.textContent = 'Erro ao salvar configurações.';
+    }
+});
 
 document.querySelectorAll('.order-status-select').forEach(select => {
     select.addEventListener('change', async function() {

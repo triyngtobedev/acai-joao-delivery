@@ -7,7 +7,7 @@
         <div class="hero-copy">
             <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Açaí do João" class="hero-logo">
             <p class="hero-kicker">Delivery em Salvador/BA</p>
-            <h1>Açaí do João</h1>
+            <h1>{{ store.store_name if store else 'Açaí do João' }}</h1>
             <p class="hero-subtitle">Açaí cremoso, frutas frescas e combinações prontas para pedir sem enrolação.</p>
             <div id="store-status" class="hero-status-wrap">
                 {% if store and store.is_open %}

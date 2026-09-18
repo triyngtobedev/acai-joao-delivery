@@ -219,7 +219,7 @@ def pedido():
             subtotal=item['subtotal'],
         ))
 
-    mensagem = f'*📋 Novo Pedido #{order.id} - Açaí do João*\n\n'
+    mensagem = f'*📋 Novo Pedido #{order.id} - {store.store_name}*\n\n'
     mensagem += f'*👤 Cliente:* {nome}\n'
     mensagem += f'*📍 Endereço:* {endereco}\n\n'
     mensagem += '*🛒 Itens:*\n'
@@ -288,6 +288,60 @@ def admin_dashboard():
         revenue_total=revenue_total,
         order_status_labels=ORDER_STATUS_LABELS,
     )
+
+
+@app.route('/admin/store/update', methods=['POST'])
+@login_required
+def update_store():
+    data = request.form if request.form else (request.get_json(silent=True) or {})
+
+    store = StoreConfig.query.first()
+    if not store:
+        store = StoreConfig(
+            store_name='Açaí do João',
+            whatsapp_number=os.getenv('STORE_WHATSAPP', '5571999999999'),
+            delivery_fee=5.0,
+            is_open=True,
+        )
+        db.session.add(store)
+
+    store_name = (data.get('store_name') or '').strip()
+    whatsapp_number = (data.get('whatsapp_number') or '').strip()
+    delivery_fee_raw = data.get('delivery_fee')
+
+    if not store_name:
+        return jsonify({'error': 'Nome da loja é obrigatório'}), 400
+    if not whatsapp_number:
+        return jsonify({'error': 'Número do WhatsApp é obrigatório'}), 400
+
+    try:
+        delivery_fee = float(str(delivery_fee_raw).replace(',', '.'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Taxa de entrega deve ser um número'}), 400
+    if delivery_fee < 0:
+        return jsonify({'error': 'Taxa de entrega não pode ser negativa'}), 400
+
+    is_open_raw = data.get('is_open')
+    if isinstance(is_open_raw, bool):
+        is_open = is_open_raw
+    else:
+        is_open = str(is_open_raw).lower() in ('on', '1', 'true', 'yes')
+
+    store.store_name = store_name
+    store.whatsapp_number = whatsapp_number
+    store.delivery_fee = delivery_fee
+    store.is_open = is_open
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'store': {
+            'store_name': store.store_name,
+            'whatsapp_number': store.whatsapp_number,
+            'delivery_fee': store.delivery_fee,
+            'is_open': store.is_open,
+        },
+    })
 
 
 @app.route('/admin/orders/<int:id>/status', methods=['POST'])
