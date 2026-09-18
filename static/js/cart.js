@@ -163,8 +163,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const itens = cart.map(item => ({
+                product_id: item.id,
                 nome: item.name,
+                categoria: item.category,
                 quantidade: item.qty,
+                preco_unitario: item.price,
                 subtotal: item.subtotal
             }));
 

@@ -4,7 +4,7 @@ import urllib.parse
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from dotenv import load_dotenv
-from models import db, Category, Product, StoreConfig
+from models import db, Category, Product, StoreConfig, Order, OrderItem
 
 load_dotenv()
 
@@ -23,6 +23,13 @@ db.init_app(app)
 
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'change-me')
+ORDER_STATUS_LABELS = {
+    'received': 'Recebido',
+    'preparing': 'Preparando',
+    'out_for_delivery': 'Saiu para entrega',
+    'done': 'Finalizado',
+    'canceled': 'Cancelado',
+}
 
 
 def seed_data():
@@ -66,6 +73,50 @@ def login_required(f):
     return decorated_function
 
 
+def parse_order_items(raw_items):
+    parsed_items = []
+    for raw_item in raw_items:
+        product_id = raw_item.get('product_id', raw_item.get('id'))
+        product = None
+        if product_id:
+            try:
+                product = db.session.get(Product, int(product_id))
+            except (TypeError, ValueError):
+                product = None
+
+        quantity = raw_item.get('quantidade', raw_item.get('qty', 1))
+        try:
+            quantity = max(1, int(quantity))
+        except (TypeError, ValueError):
+            quantity = 1
+
+        if product:
+            product_name = product.name
+            unit_price = float(product.price)
+        else:
+            product_name = raw_item.get('nome', raw_item.get('name', '')).strip()
+            raw_subtotal = raw_item.get('subtotal', raw_item.get('preco', raw_item.get('price', 0)))
+            try:
+                raw_subtotal = float(raw_subtotal)
+            except (TypeError, ValueError):
+                raw_subtotal = 0.0
+            unit_price = raw_subtotal / quantity if quantity else raw_subtotal
+
+        if not product_name:
+            continue
+
+        subtotal = round(unit_price * quantity, 2)
+        parsed_items.append({
+            'product_id': product.id if product else None,
+            'product_name': product_name,
+            'quantity': quantity,
+            'unit_price': round(unit_price, 2),
+            'subtotal': subtotal,
+        })
+
+    return parsed_items
+
+
 @app.route('/')
 def index():
     store = StoreConfig.query.first()
@@ -88,6 +139,10 @@ def pedido():
         observacoes = data.get('observacoes', '')
         itens = json.loads(data.get('itens', '[]'))
 
+    nome = (nome or '').strip()
+    endereco = (endereco or '').strip()
+    observacoes = (observacoes or '').strip()
+
     if not nome or not endereco:
         return jsonify({'error': 'Nome e endereço são obrigatórios'}), 400
     if not itens:
@@ -101,26 +156,58 @@ def pedido():
 
     delivery_fee = store.delivery_fee
     whatsapp_number = store.whatsapp_number
+    parsed_items = parse_order_items(itens)
+    if not parsed_items:
+        return jsonify({'error': 'Nenhum item válido no carrinho'}), 400
 
-    mensagem = '*📋 Novo Pedido - Açaí do João*\n\n'
+    subtotal = round(sum(item['subtotal'] for item in parsed_items), 2)
+    total = round(subtotal + delivery_fee, 2)
+
+    order = Order(
+        customer_name=nome,
+        customer_address=endereco,
+        notes=observacoes,
+        status='received',
+        subtotal=subtotal,
+        delivery_fee=delivery_fee,
+        total=total,
+    )
+    db.session.add(order)
+    db.session.flush()
+
+    for item in parsed_items:
+        db.session.add(OrderItem(
+            order_id=order.id,
+            product_id=item['product_id'],
+            product_name=item['product_name'],
+            quantity=item['quantity'],
+            unit_price=item['unit_price'],
+            subtotal=item['subtotal'],
+        ))
+
+    mensagem = f'*📋 Novo Pedido #{order.id} - Açaí do João*\n\n'
     mensagem += f'*👤 Cliente:* {nome}\n'
     mensagem += f'*📍 Endereço:* {endereco}\n\n'
     mensagem += '*🛒 Itens:*\n'
-    for item in itens:
-        nome_item = item.get('nome', item.get('name', ''))
-        qtd = item.get('quantidade', item.get('qty', 1))
-        subtotal = item.get('subtotal', item.get('preco', 0))
-        mensagem += f'  • {nome_item} x{qtd} - R$ {subtotal:.2f}\n'
+    for item in parsed_items:
+        mensagem += f"  • {item['product_name']} x{item['quantity']} - R$ {item['subtotal']:.2f}\n"
     mensagem += f'\n*💵 Taxa de entrega:* R$ {delivery_fee:.2f}\n'
-    total = sum(item.get('subtotal', item.get('preco', 0)) for item in itens) + delivery_fee
     mensagem += f'*💰 Total: R$ {total:.2f}*\n'
     if observacoes:
         mensagem += f'\n*📝 Observações:* {observacoes}\n'
 
     params = urllib.parse.urlencode({'text': mensagem})
     wa_me_url = f'https://wa.me/{whatsapp_number}?{params}'
+    order.whatsapp_url = wa_me_url
+    db.session.commit()
 
-    return jsonify({'success': True, 'wa_me_url': wa_me_url, 'total': total, 'message': 'Pedido gerado com sucesso!'})
+    return jsonify({
+        'success': True,
+        'order_id': order.id,
+        'wa_me_url': wa_me_url,
+        'total': total,
+        'message': 'Pedido gerado com sucesso!',
+    })
 
 
 @app.route('/admin/login')
@@ -152,7 +239,31 @@ def admin_dashboard():
     store = StoreConfig.query.first()
     categories = Category.query.order_by(Category.sort_order.asc()).all()
     products = Product.query.all()
-    return render_template('admin/dashboard.html', store=store, categories=categories, products=products)
+    orders = Order.query.order_by(Order.created_at.desc()).limit(20).all()
+    open_orders = Order.query.filter(Order.status.in_(['received', 'preparing', 'out_for_delivery'])).count()
+    revenue_total = db.session.query(db.func.coalesce(db.func.sum(Order.total), 0)).filter(Order.status != 'canceled').scalar()
+    return render_template(
+        'admin/dashboard.html',
+        store=store,
+        categories=categories,
+        products=products,
+        orders=orders,
+        open_orders=open_orders,
+        revenue_total=revenue_total,
+        order_status_labels=ORDER_STATUS_LABELS,
+    )
+
+
+@app.route('/admin/orders/<int:id>/status', methods=['POST'])
+@login_required
+def update_order_status(id):
+    order = db.get_or_404(Order, id)
+    status = request.form.get('status') or (request.get_json(silent=True) or {}).get('status')
+    if status not in ORDER_STATUS_LABELS:
+        return jsonify({'error': 'Status inválido'}), 400
+    order.status = status
+    db.session.commit()
+    return jsonify({'success': True, 'status': status, 'label': ORDER_STATUS_LABELS[status]})
 
 
 @app.route('/admin/products/create', methods=['POST'])
