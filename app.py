@@ -4,6 +4,7 @@ import urllib.parse
 import secrets
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask_wtf.csrf import CSRFError, CSRFProtect
 from dotenv import load_dotenv
 from models import db, Category, Product, StoreConfig, Order, OrderItem
 
@@ -18,6 +19,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION
+app.config['WTF_CSRF_ENABLED'] = True
+
+csrf = CSRFProtect(app)
 
 instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
 os.makedirs(instance_dir, exist_ok=True)
@@ -102,16 +106,34 @@ def login_required(f):
     return decorated_function
 
 
+@app.errorhandler(CSRFError)
+def handle_csrf_error(error):
+    message = 'Sessão expirada ou token de segurança inválido. Recarregue a página e tente novamente.'
+    if request.path == '/admin/login':
+        return render_template('admin/login.html', error=message), 400
+    if request.path.startswith('/admin/'):
+        return jsonify({'error': message}), 400
+    return jsonify({'error': message}), 400
+
+
 def parse_order_items(raw_items):
     parsed_items = []
     for raw_item in raw_items:
         product_id = raw_item.get('product_id', raw_item.get('id'))
         product = None
-        if product_id:
-            try:
-                product = db.session.get(Product, int(product_id))
-            except (TypeError, ValueError):
-                product = None
+        try:
+            product_id = int(product_id)
+        except (TypeError, ValueError):
+            app.logger.warning('Item rejeitado no pedido: ID de produto invalido (%r)', product_id)
+            continue
+
+        product = db.session.get(Product, product_id)
+        if not product:
+            app.logger.warning('Item rejeitado no pedido: produto %s nao encontrado', product_id)
+            continue
+        if not product.is_active:
+            app.logger.warning('Item rejeitado no pedido: produto %s inativo', product_id)
+            continue
 
         quantity = raw_item.get('quantidade', raw_item.get('qty', 1))
         try:
@@ -119,24 +141,12 @@ def parse_order_items(raw_items):
         except (TypeError, ValueError):
             quantity = 1
 
-        if product:
-            product_name = product.name
-            unit_price = float(product.price)
-        else:
-            product_name = raw_item.get('nome', raw_item.get('name', '')).strip()
-            raw_subtotal = raw_item.get('subtotal', raw_item.get('preco', raw_item.get('price', 0)))
-            try:
-                raw_subtotal = float(raw_subtotal)
-            except (TypeError, ValueError):
-                raw_subtotal = 0.0
-            unit_price = raw_subtotal / quantity if quantity else raw_subtotal
-
-        if not product_name:
-            continue
+        product_name = product.name
+        unit_price = float(product.price)
 
         subtotal = round(unit_price * quantity, 2)
         parsed_items.append({
-            'product_id': product.id if product else None,
+            'product_id': product.id,
             'product_name': product_name,
             'quantity': quantity,
             'unit_price': round(unit_price, 2),
@@ -149,9 +159,9 @@ def parse_order_items(raw_items):
 @app.route('/')
 def index():
     store = StoreConfig.query.first()
-    categories = Category.query.order_by(Category.sort_order.asc()).all()
+    categories = Category.query.filter_by(is_active=True).order_by(Category.sort_order.asc()).all()
     products = Product.query.filter_by(is_active=True).all()
-    return render_template('public/index.html', store=store, categories=categories, products=products)
+    return render_template('index.html', store=store, categories=categories, products=products)
 
 
 @app.route('/healthz')
@@ -159,8 +169,27 @@ def healthz():
     return jsonify({'status': 'ok'}), 200
 
 
+@app.route('/api/settings')
+def api_settings():
+    store = StoreConfig.query.first()
+    return jsonify({
+        'delivery_fee': float(store.delivery_fee) if store else 0.0,
+        'is_open': store.is_open if store else True,
+        'store_name': store.store_name if store else 'Açaí do João',
+    })
+
+
 @app.route('/pedido', methods=['POST'])
+@csrf.exempt
 def pedido():
+    allowed_origins = [
+        request.host_url.rstrip('/'),
+        os.getenv('APP_URL', '').rstrip('/'),
+    ]
+    origin = request.headers.get('Origin') or request.headers.get('Referer', '')
+    if IS_PRODUCTION and origin and not any(origin.startswith(o) for o in allowed_origins if o):
+        return jsonify({'error': 'Requisição não autorizada'}), 403
+
     data = request.get_json() if request.is_json else request.form
     if request.is_json:
         nome = data.get('nome')

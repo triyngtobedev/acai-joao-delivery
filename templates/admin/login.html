@@ -13,6 +13,7 @@
                     </div>
                     {% endif %}
                     <form method="POST" action="{{ url_for('admin_login_post') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label class="form-label" style="color: #d4d4d8; font-family: 'Inter', sans-serif;">Usuário</label>
                             <input type="text" class="form-control" name="username" placeholder="Username" required style="background-color: #2a2a2a; border: 1px solid #6B21A8; color: #fff;">

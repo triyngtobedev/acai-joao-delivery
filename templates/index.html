@@ -1,0 +1,159 @@
+{% extends "base_loja.html" %}
+
+{% block content %}
+<div class="loja-wrapper">
+
+  <!-- HEADER -->
+  <header class="loja-header">
+    <div class="loja-header-inner">
+      <a href="#topo" class="loja-brand">
+        <img src="{{ url_for('static', filename='img/logo.png') }}"
+             alt="Açaí do João" onerror="this.style.display='none'">
+        <span>{{ store.store_name if store else 'Açaí do João' }}</span>
+      </a>
+      <button class="btn-cart-header js-cart-toggle" type="button"
+              aria-label="Abrir carrinho" aria-controls="cart-sidebar"
+              aria-expanded="false">
+        🛒 <span class="cart-label">Carrinho</span>
+        <span class="cart-badge" id="cart-count" aria-live="polite">0</span>
+      </button>
+    </div>
+    <div class="loja-strip" id="topo">
+      <span>Delivery em Salvador/BA</span>
+      {% if store and store.is_open %}
+        <span class="badge-status open">● Aberto</span>
+      {% else %}
+        <span class="badge-status closed">● Fechado</span>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- CATEGORIAS (tabs de navegação) -->
+  <nav class="category-nav" aria-label="Categorias do cardápio">
+    {% for category in categories %}
+      {% set cat_products = products|selectattr('category_id','equalto',category.id)|selectattr('is_active','equalto',true)|list %}
+      {% if cat_products %}
+        <a class="category-tab" href="#cat-{{ category.id }}">{{ category.name }}</a>
+      {% endif %}
+    {% endfor %}
+  </nav>
+
+  <!-- CARDÁPIO -->
+  <main class="loja-main" id="cardapio">
+    {% for category in categories %}
+      {% set cat_products = products|selectattr('category_id','equalto',category.id)|selectattr('is_active','equalto',true)|list %}
+      {% if cat_products %}
+      <section class="cat-section" id="cat-{{ category.id }}">
+        <h2 class="cat-title">{{ category.name }}</h2>
+        <div class="product-grid">
+          {% for product in cat_products %}
+          {% set imgs = ['img/acai-foto2.jpg','img/hero-pour.jpg','img/acai-foto3.webp'] %}
+          {% set fallback = imgs[loop.index0 % imgs|length] %}
+          <article class="product-card" data-product-id="{{ product.id }}">
+            <div class="product-thumb">
+              {% if product.image_url %}
+                <img src="{{ product.image_url }}" alt="{{ product.name }}"
+                     loading="lazy"
+                     onerror="this.parentNode.classList.add('no-img'); this.remove();">
+              {% else %}
+                <img src="{{ url_for('static', filename=fallback) }}"
+                     alt="{{ product.name }}" loading="lazy">
+              {% endif %}
+              <div class="product-thumb-placeholder" aria-hidden="true">{{ product.name[0] }}</div>
+            </div>
+            <div class="product-body">
+              <h3 class="product-name">{{ product.name }}</h3>
+              {% if product.description %}
+                <p class="product-desc">{{ product.description }}</p>
+              {% endif %}
+              <div class="product-footer">
+                <span class="product-price">R$ {{ "%.2f"|format(product.price)|replace('.', ',') }}</span>
+                <button class="btn-add"
+                        type="button"
+                        data-id="{{ product.id }}"
+                        data-name="{{ product.name }}"
+                        data-price="{{ product.price }}"
+                        data-category="{{ category.name }}"
+                        aria-label="Adicionar {{ product.name }} ao carrinho">
+                  +
+                </button>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    {% endfor %}
+  </main>
+
+</div>
+{% endblock %}
+
+{% block footer %}
+<!-- BOTÃO MOBILE FIXO -->
+<button class="btn-cart-mobile js-cart-toggle" type="button"
+        aria-label="Abrir carrinho" aria-controls="cart-sidebar">
+  🛒 Carrinho
+  <span class="cart-badge" id="cart-count-mobile" aria-live="polite">0</span>
+</button>
+
+<!-- BACKDROP -->
+<div class="cart-backdrop" id="cart-backdrop" aria-hidden="true"></div>
+
+<!-- SIDEBAR DO CARRINHO -->
+<aside class="cart-sidebar" id="cart-sidebar"
+       aria-label="Carrinho de compras" aria-hidden="true">
+
+  <div class="cart-sidebar-head">
+    <span class="cart-sidebar-title">Seu pedido</span>
+    <button class="btn-cart-close js-cart-toggle" type="button"
+            aria-label="Fechar carrinho">×</button>
+  </div>
+
+  <div class="cart-sidebar-body" id="cart-items-list">
+    <p class="cart-empty-msg">Seu carrinho está vazio 🍇</p>
+  </div>
+
+  <div class="cart-sidebar-foot">
+    <!-- RESUMO DE VALORES -->
+    <div class="cart-summary">
+      <div class="summary-row">
+        <span>Subtotal</span>
+        <span id="cart-subtotal">R$ 0,00</span>
+      </div>
+      <div class="summary-row">
+        <span>Taxa de entrega</span>
+        <span id="cart-delivery-fee">–</span>
+      </div>
+      <div class="summary-row summary-total">
+        <strong>Total</strong>
+        <strong id="cart-total-final">R$ 0,00</strong>
+      </div>
+    </div>
+
+    <!-- DADOS DO CLIENTE -->
+    <div class="form-group">
+      <label for="cliente-nome">Seu nome</label>
+      <input type="text" id="cliente-nome" placeholder="Como você se chama?">
+    </div>
+    <div class="form-group">
+      <label for="cliente-endereco">Endereço de entrega</label>
+      <input type="text" id="cliente-endereco" placeholder="Rua, número, bairro">
+    </div>
+    <div class="form-group">
+      <label for="cliente-observacoes">Observações</label>
+      <textarea id="cliente-observacoes" rows="2"
+                placeholder="Ex: sem granola, capricha no leite condensado"></textarea>
+    </div>
+
+    <button class="btn-finalizar" id="btn-whatsapp-order" type="button">
+      Finalizar pelo WhatsApp 📲
+    </button>
+  </div>
+</aside>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+{% endblock %}

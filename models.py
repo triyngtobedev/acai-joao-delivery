@@ -9,6 +9,7 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     sort_order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     products = db.relationship('Product', backref='category', lazy=True, cascade='all, delete-orphan')
 
     def __repr__(self):

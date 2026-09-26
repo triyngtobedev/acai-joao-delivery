@@ -1,22 +1,45 @@
 /* ===== Carrinho com localStorage ===== */
 
 let cart = JSON.parse(localStorage.getItem('acai_cart')) || [];
+let storeDeliveryFee = 0;
+let storeIsOpen = true;
+
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
+
+function formatCurrency(value) {
+    return `R$ ${Number(value || 0).toFixed(2).replace('.', ',')}`;
+}
+
+function updateCartBadge(count) {
+    const badges = document.querySelectorAll('.cart-badge');
+    badges.forEach(b => {
+        b.textContent = count;
+        b.style.display = count > 0 ? 'inline-flex' : 'none';
+    });
+}
 
 function updateCartUI() {
     const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
     const totalPrice = cart.reduce((sum, item) => sum + item.subtotal, 0);
 
-    const navCount = document.getElementById('nav-cart-count');
-    const footerCount = document.getElementById('footer-cart-count');
-    const footerTotal = document.getElementById('footer-total');
-    if (navCount) navCount.textContent = totalItems;
-    if (footerCount) footerCount.textContent = totalItems;
-    if (footerTotal) footerTotal.textContent = `R$ ${totalPrice.toFixed(2)}`;
+    updateCartBadge(totalItems);
 
-    const cartList = document.getElementById('carrinho-list');
+    const totalWithFee = totalPrice + storeDeliveryFee;
+    const subtotalDisplay = document.getElementById('cart-subtotal');
+    const deliveryFeeDisplay = document.getElementById('cart-delivery-fee');
+    const totalDisplay = document.getElementById('cart-total-final');
+
+    if (subtotalDisplay) subtotalDisplay.textContent = formatCurrency(totalPrice);
+    if (deliveryFeeDisplay) deliveryFeeDisplay.textContent = storeDeliveryFee > 0 ? formatCurrency(storeDeliveryFee) : '–';
+    if (totalDisplay) totalDisplay.textContent = formatCurrency(totalWithFee);
+
+    const cartList = document.getElementById('cart-items-list');
     if (!cartList) return;
     if (cart.length === 0) {
-        cartList.innerHTML = '<p class="text-muted text-center">Seu carrinho está vazio</p>';
+        cartList.innerHTML = '<p class="cart-empty-msg">Seu carrinho está vazio 🍇</p>';
         return;
     }
 
@@ -28,31 +51,18 @@ function updateCartUI() {
                     <div class="cart-item-name">${escapeHtml(item.name)}</div>
                     <div class="cart-item-qty">${escapeHtml(item.category || '')} • Qtd: ${item.qty}</div>
                 </div>
-                <div style="display:flex; align-items:center; gap:4px;">
-                    <button onclick="changeQty(${index}, -1)" style="background:#6B21A8; color:#fff; border:none; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:0.9rem;">-</button>
-                    <span style="color:#fff; font-weight:600; min-width:20px; text-align:center;">${item.qty}</span>
-                    <button onclick="changeQty(${index}, 1)" style="background:#6B21A8; color:#fff; border:none; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:0.9rem;">+</button>
-                    <span class="cart-item-price" style="margin-left:8px; min-width:60px;">R$ ${item.subtotal.toFixed(2)}</span>
-                    <button class="cart-item-remove" onclick="removeFromCart(${index})" title="Remover" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.2rem; margin-left:4px;">×</button>
+                <div class="cart-item-controls">
+                    <div class="cart-qty-group">
+                        <button class="cart-qty-button" onclick="changeQty(${index}, -1)">-</button>
+                        <span style="font-weight:900; min-width:20px; text-align:center;">${item.qty}</span>
+                        <button class="cart-qty-button" onclick="changeQty(${index}, 1)">+</button>
+                    </div>
+                    <span class="cart-item-price">${formatCurrency(item.subtotal)}</span>
+                    <button class="cart-item-remove" onclick="removeFromCart(${index})" title="Remover">×</button>
                 </div>
             </div>
         `;
     });
-    html += `<div class="d-flex justify-content-between mt-3 fw-bold" style="color: #fff; font-family: 'Inter', sans-serif;">
-        <span>Subtotal:</span>
-        <span style="color: #4ADE80;">R$ ${totalPrice.toFixed(2)}</span>
-    </div>`;
-    if (storeDeliveryFee) {
-        html += `<div class="d-flex justify-content-between" style="color: #a1a1aa; font-family: 'Inter', sans-serif; font-size: 0.85rem;">
-            <span>Taxa de entrega:</span>
-            <span style="color: #4ADE80;">R$ ${storeDeliveryFee.toFixed(2)}</span>
-        </div>`;
-    }
-    const totalWithFee = totalPrice + (storeDeliveryFee || 0);
-    html += `<div class="d-flex justify-content-between mt-2 fw-bold" style="color: #fff; font-family: 'Inter', sans-serif; font-size: 1.1rem;">
-        <span>Total:</span>
-        <span style="color: #4ADE80;">R$ ${totalWithFee.toFixed(2)}</span>
-    </div>`;
     cartList.innerHTML = html;
 }
 
@@ -62,20 +72,20 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-let storeDeliveryFee = null;
+async function loadStoreSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        if (!response.ok) throw new Error('Erro ao carregar configurações');
 
-function getStoreInfo(callback) {
-    fetch('/')
-        .then(r => r.text())
-        .then(html => {
-            const feeMatch = html.match(/Taxa de entrega.*?R$\s*([\d.]+)/i);
-            storeDeliveryFee = feeMatch ? parseFloat(feeMatch[1]) : 5.00;
-            callback();
-        })
-        .catch(() => {
-            storeDeliveryFee = 5.00;
-            callback();
-        });
+        const data = await response.json();
+        const deliveryFee = Number(data.delivery_fee);
+        storeDeliveryFee = Number.isFinite(deliveryFee) ? deliveryFee : 0;
+        const isOpen = data.is_open;
+        storeIsOpen = typeof isOpen === 'boolean' ? isOpen : true;
+    } catch (e) {
+        storeDeliveryFee = 0;
+        storeIsOpen = true;
+    }
 }
 
 function addToCart(productId, name, price, category) {
@@ -123,30 +133,85 @@ function clearCart() {
 
 function showToast(message) {
     const toastContainer = document.createElement('div');
-    toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+    toastContainer.className = 'toast-container';
     toastContainer.innerHTML = `
-        <div class="toast show" role="alert" style="background-color: #6B21A8; color: #fff; border-radius: 12px;">
-            <div class="toast-body" style="font-family: 'Inter', sans-serif;">${message}</div>
+        <div class="toast show" role="alert">
+            <div class="toast-body">${message}</div>
         </div>
     `;
     document.body.appendChild(toastContainer);
     setTimeout(() => toastContainer.remove(), 2500);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+function openCart() {
+    const sidebar = document.getElementById('cart-sidebar');
+    const backdrop = document.getElementById('cart-backdrop');
+    if (sidebar) {
+        sidebar.classList.add('is-open');
+        sidebar.setAttribute('aria-hidden', 'false');
+    }
+    if (backdrop) backdrop.classList.add('is-open');
+    document.querySelectorAll('.js-cart-toggle').forEach(btn => {
+        btn.setAttribute('aria-expanded', 'true');
+    });
+}
+
+function closeCart() {
+    const sidebar = document.getElementById('cart-sidebar');
+    const backdrop = document.getElementById('cart-backdrop');
+    if (sidebar) {
+        sidebar.classList.remove('is-open');
+        sidebar.setAttribute('aria-hidden', 'true');
+    }
+    if (backdrop) backdrop.classList.remove('is-open');
+    document.querySelectorAll('.js-cart-toggle').forEach(btn => {
+        btn.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function toggleCart() {
+    const sidebar = document.getElementById('cart-sidebar');
+    if (!sidebar) return;
+    const isOpen = sidebar.classList.contains('is-open');
+    if (isOpen) {
+        closeCart();
+    } else {
+        openCart();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadStoreSettings();
     updateCartUI();
 
-    document.querySelectorAll('.btn-add-cart').forEach(btn => {
+    document.querySelectorAll('.js-cart-toggle').forEach(btn => {
+        btn.addEventListener('click', toggleCart);
+    });
+
+    const cartBackdrop = document.getElementById('cart-backdrop');
+    if (cartBackdrop) cartBackdrop.addEventListener('click', closeCart);
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeCart();
+    });
+
+    document.querySelectorAll('.btn-add').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = parseInt(this.dataset.id);
             const name = this.dataset.name;
             const price = parseFloat(this.dataset.price);
             const category = this.dataset.category;
             addToCart(id, name, price, category);
+            this.classList.add('added');
+            this.textContent = '✓';
+            setTimeout(() => {
+                this.classList.remove('added');
+                this.textContent = '+';
+            }, 1000);
         });
     });
 
-    const finalizarBtn = document.getElementById('btn-finalizar-pedido');
+    const finalizarBtn = document.getElementById('btn-whatsapp-order');
     if (finalizarBtn) {
         finalizarBtn.addEventListener('click', async function() {
             const nome = document.getElementById('cliente-nome').value.trim();
@@ -159,6 +224,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (cart.length === 0) {
                 showToast('Seu carrinho está vazio!');
+                return;
+            }
+            if (!storeIsOpen) {
+                showToast('A loja está fechada no momento. Tente mais tarde!');
                 return;
             }
 
@@ -174,7 +243,10 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const response = await fetch('/pedido', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
                     body: JSON.stringify({ nome, endereco, observacoes, itens })
                 });
                 const data = await response.json();
