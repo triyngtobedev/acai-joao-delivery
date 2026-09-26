@@ -8,3 +8,4 @@ instance/
 .idea/
 node_modules/
 .venv/
+.codex-tmp-instadelivery/
