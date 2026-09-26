@@ -74,7 +74,7 @@ def seed_data():
         ]
         db.session.add_all(cats)
         db.session.flush()
-        acai_cat = Category.query.filter_by(name='Acais').first()
+        acai_cat = Category.query.filter_by(name='Açaís').first()
         comp_cat = Category.query.filter_by(name='Complementos').first()
         beb_cat = Category.query.filter_by(name='Bebidas').first()
         products = [
