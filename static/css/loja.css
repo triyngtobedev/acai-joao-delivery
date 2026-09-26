@@ -206,10 +206,11 @@ a {
 }
 
 .cat-title {
-    margin: 0 0 14px;
-    color: var(--purple-950);
-    font-size: clamp(1.3rem, 2.6vw, 1.75rem);
-    line-height: 1.15;
+    background: var(--purple-900);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    margin-bottom: 14px;
 }
 
 .product-grid {

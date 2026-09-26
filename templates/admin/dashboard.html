@@ -218,6 +218,10 @@
                                 <button class="btn btn-sm" style="background-color: #ef4444; color: #fff; border: none; border-radius: 8px; font-size: 0.75rem;" onclick="deleteProduct({{ product.id }})">
                                     🗑️
                                 </button>
+                                <form onsubmit="uploadImagem(event, {{ product.id }})">
+                                    <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+                                    <button type="submit">Enviar foto</button>
+                                </form>
                             </td>
                         </tr>
                         {% endfor %}
@@ -389,6 +393,27 @@ async function toggleProduct(productId) {
         alert('Erro ao alterar status do produto.');
     } finally {
         button.disabled = false;
+    }
+}
+
+async function uploadImagem(event, productId) {
+    event.preventDefault();
+    const form = event.target;
+    const file = form.querySelector('input[type=file]').files[0];
+    if (!file) return alert('Selecione uma imagem');
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(`/admin/products/${productId}/upload-image`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
+        body: formData
+    });
+    const data = await res.json();
+    if (data.success) {
+        alert('Imagem enviada!');
+        location.reload();
+    } else {
+        alert(data.error);
     }
 }
 

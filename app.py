@@ -68,7 +68,7 @@ validate_runtime_config()
 def seed_data():
     if Category.query.count() == 0:
         cats = [
-            Category(name='Acais', sort_order=1),
+            Category(name='Açaís', sort_order=1),
             Category(name='Complementos', sort_order=2),
             Category(name='Bebidas', sort_order=3),
         ]
@@ -421,6 +421,39 @@ def update_product(id):
     product.is_active = request.form.get('is_active') == 'on'
     db.session.commit()
     return jsonify({'success': True})
+
+
+@app.route('/admin/products/<int:id>/upload-image', methods=['POST'])
+@login_required
+def upload_product_image(id):
+    import uuid
+    from werkzeug.utils import secure_filename
+
+    product = db.get_or_404(Product, id)
+    file = request.files.get('image')
+
+    if not file or file.filename == '':
+        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+
+    allowed = {'jpg', 'jpeg', 'png', 'webp'}
+    ext = file.filename.rsplit('.', 1)[-1].lower()
+    if ext not in allowed:
+        return jsonify({'error': 'Formato inválido. Use jpg, png ou webp'}), 400
+
+    if len(file.read()) > 2 * 1024 * 1024:
+        return jsonify({'error': 'Imagem muito grande. Máximo 2MB'}), 400
+    file.seek(0)
+
+    upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'products')
+    os.makedirs(upload_dir, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    file.save(os.path.join(upload_dir, filename))
+
+    product.image_url = f'/static/uploads/products/{filename}'
+    db.session.commit()
+
+    return jsonify({'success': True, 'image_url': product.image_url})
 
 
 @app.route('/admin/products/<int:id>/delete', methods=['POST'])
